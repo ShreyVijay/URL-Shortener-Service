@@ -6,6 +6,7 @@ import com.shrey.urlshortener.repository.ShortUrlRepository;
 import com.shrey.urlshortener.util.Base62Encoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ShortUrlServiceImpl implements ShortUrlService {
 
     private final ShortUrlRepository shortUrlRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional
@@ -56,6 +58,15 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     @Override
     @Transactional
     public String getOriginalUrl(String shortCode) {
+        // 1. Check Redis first
+        String cached = redisTemplate.opsForValue().get(shortCode);
+        if (cached != null) {
+            System.out.println("CACHE HIT  → shortCode=" + shortCode);
+            return cached;
+        }
+
+        // 2. Cache miss — query PostgreSQL
+        System.out.println("CACHE MISS → shortCode=" + shortCode + " (querying DB)");
         ShortUrl entity = shortUrlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
 
@@ -63,6 +74,10 @@ public class ShortUrlServiceImpl implements ShortUrlService {
             throw new ShortCodeNotFoundException("Short code has expired: " + shortCode);
         }
 
+        // 3. Store in Redis for next time
+        redisTemplate.opsForValue().set(shortCode, entity.getOriginalUrl());
+
+        // 4. Increment click count in DB
         shortUrlRepository.incrementClickCount(entity.getId());
 
         return entity.getOriginalUrl();
