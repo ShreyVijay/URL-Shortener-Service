@@ -56,11 +56,15 @@ public class ShortUrlServiceImpl implements ShortUrlService {
     @Override
     @Transactional
     public String getOriginalUrl(String shortCode) {
-        // TODO (M1-5-4): implement redirect resolution
-        //  1. findByShortCode → throw ShortCodeNotFoundException if absent
-        //  2. isExpired() check → throw ShortCodeNotFoundException if expired
-        //  3. shortUrlRepository.incrementClickCount(entity.getId())
-        //  4. return entity.getOriginalUrl()
-        throw new UnsupportedOperationException("Not yet implemented");
+        ShortUrl entity = shortUrlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
+
+        if (entity.isExpired()) {
+            throw new ShortCodeNotFoundException("Short code has expired: " + shortCode);
+        }
+
+        shortUrlRepository.incrementClickCount(entity.getId());
+
+        return entity.getOriginalUrl();
     }
 }
