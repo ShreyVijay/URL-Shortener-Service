@@ -1,6 +1,6 @@
 package com.shrey.urlshortener.controller;
 
-import com.shrey.urlshortener.service.UrlService;
+import com.shrey.urlshortener.service.ShortUrlService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -13,16 +13,18 @@ import java.net.URI;
 @RequiredArgsConstructor
 public class RedirectController {
 
-    private final UrlService urlService;
+    private final ShortUrlService shortUrlService;
 
     /**
      * GET /{shortCode}
      * Resolves a short code to its original URL and issues an HTTP 302 redirect.
-     * Increments the hit counter on every successful redirect.
+     * Increments the click counter on every successful redirect.
      */
     @GetMapping("/{shortCode}")
     public ResponseEntity<Void> redirect(@PathVariable String shortCode) {
-        // TODO (M1-6-5): call urlService.resolve(shortCode), build 302 Location response
-        throw new UnsupportedOperationException("Not yet implemented");
+        String originalUrl = shortUrlService.getOriginalUrl(shortCode);
+        return ResponseEntity.status(302)
+                .location(URI.create(originalUrl))
+                .build();
     }
 }
