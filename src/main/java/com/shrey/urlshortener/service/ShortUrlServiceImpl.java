@@ -1,5 +1,6 @@
 package com.shrey.urlshortener.service;
 
+import com.shrey.urlshortener.dto.UrlStatsResponse;
 import com.shrey.urlshortener.entity.ShortUrl;
 import com.shrey.urlshortener.exception.ShortCodeNotFoundException;
 import com.shrey.urlshortener.repository.ShortUrlRepository;
@@ -61,12 +62,14 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         // 1. Check Redis first
         String cached = redisTemplate.opsForValue().get(shortCode);
         if (cached != null) {
-            System.out.println("CACHE HIT  → shortCode=" + shortCode);
+            System.out.println("CACHE HIT  \u2192 shortCode=" + shortCode);
+            // Still increment click count even on cache hits
+            shortUrlRepository.incrementClickCountByShortCode(shortCode);
             return cached;
         }
 
         // 2. Cache miss — query PostgreSQL
-        System.out.println("CACHE MISS → shortCode=" + shortCode + " (querying DB)");
+        System.out.println("CACHE MISS \u2192 shortCode=" + shortCode + " (querying DB)");
         ShortUrl entity = shortUrlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
 
@@ -74,12 +77,21 @@ public class ShortUrlServiceImpl implements ShortUrlService {
             throw new ShortCodeNotFoundException("Short code has expired: " + shortCode);
         }
 
-        // 3. Store in Redis for next time
+        // 3. Store in Redis for future requests
         redisTemplate.opsForValue().set(shortCode, entity.getOriginalUrl());
 
         // 4. Increment click count in DB
-        shortUrlRepository.incrementClickCount(entity.getId());
+        shortUrlRepository.incrementClickCountByShortCode(shortCode);
 
         return entity.getOriginalUrl();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UrlStatsResponse getStats(String shortCode) {
+        ShortUrl entity = shortUrlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
+
+        return new UrlStatsResponse(entity.getShortCode(), entity.getOriginalUrl(), entity.getClickCount());
     }
 }

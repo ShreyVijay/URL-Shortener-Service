@@ -21,4 +21,8 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
     @Modifying
     @Query("UPDATE ShortUrl s SET s.clickCount = s.clickCount + 1 WHERE s.id = :id")
     void incrementClickCount(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE ShortUrl s SET s.clickCount = s.clickCount + 1 WHERE s.shortCode = :shortCode")
+    void incrementClickCountByShortCode(@Param("shortCode") String shortCode);
 }

@@ -1,0 +1,26 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: urlshortener-postgres
+    environment:
+      POSTGRES_DB: urlshortener
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:latest
+    container_name: urlshortener-redis
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    container_name: urlshortener-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis

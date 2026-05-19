@@ -13,4 +13,10 @@ public interface ShortUrlService {
      * Throws ShortCodeNotFoundException if the code is unknown or expired.
      */
     String getOriginalUrl(String shortCode);
+
+    /**
+     * Returns stats (shortCode, originalUrl, clickCount) for a given short code.
+     * Throws ShortCodeNotFoundException if the code does not exist.
+     */
+    com.shrey.urlshortener.dto.UrlStatsResponse getStats(String shortCode);
 }

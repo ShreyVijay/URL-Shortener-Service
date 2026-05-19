@@ -2,6 +2,7 @@ package com.shrey.urlshortener.controller;
 
 import com.shrey.urlshortener.dto.ShortenUrlRequest;
 import com.shrey.urlshortener.dto.ShortenUrlResponse;
+import com.shrey.urlshortener.dto.UrlStatsResponse;
 import com.shrey.urlshortener.service.ShortUrlService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,5 +46,12 @@ public class ShortUrlController {
         headers.add(HttpHeaders.LOCATION, originalUrl);
 
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    }
+
+    // GET /api/stats/{shortCode}
+    // Returns shortCode, originalUrl, and total click count for a given short URL.
+    @GetMapping("/api/stats/{shortCode}")
+    public ResponseEntity<UrlStatsResponse> stats(@PathVariable String shortCode) {
+        return ResponseEntity.ok(shortUrlService.getStats(shortCode));
     }
 }
