@@ -9,7 +9,8 @@ import java.time.LocalDateTime;
 @Table(
     name = "short_urls",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uq_short_urls_short_code", columnNames = "short_code")
+        @UniqueConstraint(name = "uq_short_urls_short_code", columnNames = "short_code"),
+        @UniqueConstraint(name = "uq_short_urls_custom_alias_key", columnNames = "custom_alias_key")
     },
     indexes = {
         @Index(name = "idx_short_urls_short_code",   columnList = "short_code"),
@@ -38,8 +39,11 @@ public class ShortUrl {
      * Every committed row is guaranteed to have a non-null shortCode
      * because both saves occur within the same @Transactional method.
      */
-    @Column(name = "short_code", nullable = true, unique = true, length = 20)
+    @Column(name = "short_code", nullable = true, unique = true, length = 30)
     private String shortCode;
+
+    @Column(name = "custom_alias_key", unique = true, length = 30)
+    private String customAliasKey;
 
     @Column(name = "original_url", nullable = false, updatable = false,
             columnDefinition = "TEXT")

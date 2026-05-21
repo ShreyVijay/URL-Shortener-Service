@@ -9,7 +9,15 @@ public interface ShortUrlService {
      * Shortens the given URL and returns its unique short code.
      * Idempotent: the same URL always returns the same short code.
      */
-    String createShortUrl(String originalUrl);
+    default String createShortUrl(String originalUrl) {
+        return createShortUrl(originalUrl, null);
+    }
+
+    /**
+     * Shortens the given URL using a custom alias when provided.
+     * Without an alias, the generated Base62 flow remains idempotent by URL.
+     */
+    String createShortUrl(String originalUrl, String customAlias);
 
     /**
      * Resolves a short code to its original URL and records the click.

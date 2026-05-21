@@ -22,6 +22,52 @@ sudo docker compose up -d --build
 
 The EC2 checkout is expected at `~/URL-Shortener-Service`.
 
+## Shorten API
+
+Create a generated short URL:
+
+```bash
+curl -X POST https://url-shortener-service.duckdns.org/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"originalUrl":"https://github.com"}'
+```
+
+Example response:
+
+```json
+{
+  "shortCode": "1",
+  "shortUrl": "https://url-shortener-service.duckdns.org/1"
+}
+```
+
+Create a custom alias:
+
+```bash
+curl -X POST https://url-shortener-service.duckdns.org/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"originalUrl":"https://github.com","customAlias":"github"}'
+```
+
+Example response:
+
+```json
+{
+  "shortCode": "github",
+  "shortUrl": "https://url-shortener-service.duckdns.org/github"
+}
+```
+
+Custom aliases must be 3-30 characters and may contain only letters, numbers, hyphen, and underscore.
+The reserved aliases `api`, `actuator`, and `analytics` are rejected.
+If an alias is already taken, the API returns `409 Conflict`:
+
+```json
+{
+  "error": "Alias is already taken: github"
+}
+```
+
 ## Analytics API
 
 Fetch analytics for a short URL:
