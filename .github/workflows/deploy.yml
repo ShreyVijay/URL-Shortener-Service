@@ -1,0 +1,53 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build application
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B -DskipTests package
+
+      - name: Configure SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          : "${EC2_HOST:?EC2_HOST secret is required}"
+          : "${EC2_SSH_KEY:?EC2_SSH_KEY secret is required}"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy on EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+        run: |
+          : "${EC2_HOST:?EC2_HOST secret is required}"
+          : "${EC2_USERNAME:?EC2_USERNAME secret is required}"
+          ssh -i ~/.ssh/ec2_key "$EC2_USERNAME@$EC2_HOST" << 'EOF'
+            set -euo pipefail
+            cd ~/URL-Shortener-Service
+            git pull origin develop
+            sudo docker compose down
+            sudo docker compose up -d --build
+          EOF
