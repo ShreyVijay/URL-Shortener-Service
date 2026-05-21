@@ -51,6 +51,9 @@ public class ShortUrl {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Column(name = "last_accessed_at")
+    private LocalDateTime lastAccessedAt;
+
     @Column(name = "click_count", nullable = false)
     @Builder.Default
     private long clickCount = 0L;
@@ -60,10 +63,6 @@ public class ShortUrl {
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
-    }
-
-    public void incrementClickCount() {
-        this.clickCount++;
     }
 
     public boolean isExpired() {

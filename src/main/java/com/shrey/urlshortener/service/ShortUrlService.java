@@ -1,5 +1,8 @@
 package com.shrey.urlshortener.service;
 
+import com.shrey.urlshortener.dto.UrlAnalyticsResponse;
+import com.shrey.urlshortener.dto.UrlStatsResponse;
+
 public interface ShortUrlService {
 
     /**
@@ -18,5 +21,7 @@ public interface ShortUrlService {
      * Returns stats (shortCode, originalUrl, clickCount) for a given short code.
      * Throws ShortCodeNotFoundException if the code does not exist.
      */
-    com.shrey.urlshortener.dto.UrlStatsResponse getStats(String shortCode);
+    UrlStatsResponse getStats(String shortCode);
+
+    UrlAnalyticsResponse getAnalytics(String shortCode);
 }

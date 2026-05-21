@@ -2,6 +2,7 @@ package com.shrey.urlshortener.controller;
 
 import com.shrey.urlshortener.dto.ShortenUrlRequest;
 import com.shrey.urlshortener.dto.ShortenUrlResponse;
+import com.shrey.urlshortener.dto.UrlAnalyticsResponse;
 import com.shrey.urlshortener.dto.UrlStatsResponse;
 import com.shrey.urlshortener.service.ShortUrlService;
 import jakarta.validation.Valid;
@@ -44,5 +45,10 @@ public class ShortUrlController {
     @GetMapping("/api/stats/{shortCode}")
     public ResponseEntity<UrlStatsResponse> stats(@PathVariable String shortCode) {
         return ResponseEntity.ok(shortUrlService.getStats(shortCode));
+    }
+
+    @GetMapping("/api/analytics/{shortCode}")
+    public ResponseEntity<UrlAnalyticsResponse> analytics(@PathVariable String shortCode) {
+        return ResponseEntity.ok(shortUrlService.getAnalytics(shortCode));
     }
 }

@@ -21,3 +21,24 @@ sudo docker compose up -d --build
 ```
 
 The EC2 checkout is expected at `~/URL-Shortener-Service`.
+
+## Analytics API
+
+Fetch analytics for a short URL:
+
+```bash
+curl https://url-shortener-service.duckdns.org/api/analytics/{shortCode}
+```
+
+Example response:
+
+```json
+{
+  "shortCode": "1",
+  "originalUrl": "https://example.com",
+  "clickCount": 3,
+  "createdAt": "2026-05-21T12:00:00",
+  "lastAccessedAt": "2026-05-21T12:05:00",
+  "expiresAt": null
+}
+```

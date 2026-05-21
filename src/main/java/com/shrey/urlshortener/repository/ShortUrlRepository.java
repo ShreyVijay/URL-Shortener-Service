@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -19,10 +20,6 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
     boolean existsByShortCode(String shortCode);
 
     @Modifying
-    @Query("UPDATE ShortUrl s SET s.clickCount = s.clickCount + 1 WHERE s.id = :id")
-    void incrementClickCount(@Param("id") Long id);
-
-    @Modifying
-    @Query("UPDATE ShortUrl s SET s.clickCount = s.clickCount + 1 WHERE s.shortCode = :shortCode")
-    void incrementClickCountByShortCode(@Param("shortCode") String shortCode);
+    @Query("UPDATE ShortUrl s SET s.clickCount = s.clickCount + 1, s.lastAccessedAt = :accessedAt WHERE s.shortCode = :shortCode")
+    void recordAccessByShortCode(@Param("shortCode") String shortCode, @Param("accessedAt") LocalDateTime accessedAt);
 }

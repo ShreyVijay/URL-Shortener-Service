@@ -1,5 +1,6 @@
 package com.shrey.urlshortener.service;
 
+import com.shrey.urlshortener.dto.UrlAnalyticsResponse;
 import com.shrey.urlshortener.dto.UrlStatsResponse;
 import com.shrey.urlshortener.entity.ShortUrl;
 import com.shrey.urlshortener.exception.ShortCodeNotFoundException;
@@ -10,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -63,8 +66,7 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         String cached = redisTemplate.opsForValue().get(shortCode);
         if (cached != null) {
             System.out.println("CACHE HIT  \u2192 shortCode=" + shortCode);
-            // Still increment click count even on cache hits
-            shortUrlRepository.incrementClickCountByShortCode(shortCode);
+            recordAccess(shortCode);
             return cached;
         }
 
@@ -80,10 +82,14 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         // 3. Store in Redis for future requests
         redisTemplate.opsForValue().set(shortCode, entity.getOriginalUrl());
 
-        // 4. Increment click count in DB
-        shortUrlRepository.incrementClickCountByShortCode(shortCode);
+        // 4. Record access in DB
+        recordAccess(shortCode);
 
         return entity.getOriginalUrl();
+    }
+
+    private void recordAccess(String shortCode) {
+        shortUrlRepository.recordAccessByShortCode(shortCode, LocalDateTime.now());
     }
 
     @Override
@@ -93,5 +99,22 @@ public class ShortUrlServiceImpl implements ShortUrlService {
                 .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
 
         return new UrlStatsResponse(entity.getShortCode(), entity.getOriginalUrl(), entity.getClickCount());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UrlAnalyticsResponse getAnalytics(String shortCode) {
+        log.info("Analytics requested for shortCode={}", shortCode);
+        ShortUrl entity = shortUrlRepository.findByShortCode(shortCode)
+                .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
+
+        return new UrlAnalyticsResponse(
+                entity.getShortCode(),
+                entity.getOriginalUrl(),
+                entity.getClickCount(),
+                entity.getCreatedAt(),
+                entity.getLastAccessedAt(),
+                entity.getExpiresAt()
+        );
     }
 }
