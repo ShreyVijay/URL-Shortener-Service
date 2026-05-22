@@ -22,6 +22,18 @@ sudo docker compose up -d --build
 
 The EC2 checkout is expected at `~/URL-Shortener-Service`.
 
+## Swagger / OpenAPI
+
+Interactive API documentation is available at:
+
+https://url-shortener-service.duckdns.org/swagger-ui/index.html
+
+The OpenAPI JSON document is available at:
+
+https://url-shortener-service.duckdns.org/v3/api-docs
+
+The Swagger UI documents URL creation, redirects, analytics, custom aliases, expiration support, validation errors, and rate limiting responses.
+
 ## Shorten API
 
 Create a generated short URL:
