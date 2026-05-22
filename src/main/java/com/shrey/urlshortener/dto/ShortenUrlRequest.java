@@ -2,10 +2,13 @@ package com.shrey.urlshortener.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Future;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.URL;
+
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -21,4 +24,7 @@ public class ShortenUrlRequest {
             message = "customAlias must be 3-30 characters and contain only letters, numbers, hyphen, or underscore"
     )
     private String customAlias;
+
+    @Future(message = "expiresAt must be a future timestamp")
+    private LocalDateTime expiresAt;
 }

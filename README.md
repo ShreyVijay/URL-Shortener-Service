@@ -58,6 +58,23 @@ Example response:
 }
 ```
 
+Create a URL that expires automatically:
+
+```bash
+curl -X POST https://url-shortener-service.duckdns.org/api/shorten \
+  -H "Content-Type: application/json" \
+  -d '{"originalUrl":"https://github.com","customAlias":"github-june","expiresAt":"2026-06-01T00:00:00"}'
+```
+
+`expiresAt` must be a future timestamp in ISO-8601 local date-time format.
+Expired links return `410 Gone` instead of redirecting:
+
+```json
+{
+  "error": "Short code has expired: github-june"
+}
+```
+
 Custom aliases must be 3-30 characters and may contain only letters, numbers, hyphen, and underscore.
 The reserved aliases `api`, `actuator`, and `analytics` are rejected.
 If an alias is already taken, the API returns `409 Conflict`:
@@ -85,6 +102,7 @@ Example response:
   "clickCount": 3,
   "createdAt": "2026-05-21T12:00:00",
   "lastAccessedAt": "2026-05-21T12:05:00",
-  "expiresAt": null
+  "expiresAt": "2026-06-01T00:00:00",
+  "expired": false
 }
 ```

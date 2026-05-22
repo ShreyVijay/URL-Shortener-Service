@@ -3,6 +3,8 @@ package com.shrey.urlshortener.service;
 import com.shrey.urlshortener.dto.UrlAnalyticsResponse;
 import com.shrey.urlshortener.dto.UrlStatsResponse;
 
+import java.time.LocalDateTime;
+
 public interface ShortUrlService {
 
     /**
@@ -10,14 +12,21 @@ public interface ShortUrlService {
      * Idempotent: the same URL always returns the same short code.
      */
     default String createShortUrl(String originalUrl) {
-        return createShortUrl(originalUrl, null);
+        return createShortUrl(originalUrl, null, null);
     }
 
     /**
      * Shortens the given URL using a custom alias when provided.
      * Without an alias, the generated Base62 flow remains idempotent by URL.
      */
-    String createShortUrl(String originalUrl, String customAlias);
+    default String createShortUrl(String originalUrl, String customAlias) {
+        return createShortUrl(originalUrl, customAlias, null);
+    }
+
+    /**
+     * Shortens the given URL using a custom alias and optional expiration timestamp.
+     */
+    String createShortUrl(String originalUrl, String customAlias, LocalDateTime expiresAt);
 
     /**
      * Resolves a short code to its original URL and records the click.

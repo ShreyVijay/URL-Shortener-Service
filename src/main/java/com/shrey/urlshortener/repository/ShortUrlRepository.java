@@ -24,4 +24,8 @@ public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
     @Modifying
     @Query("UPDATE ShortUrl s SET s.clickCount = s.clickCount + 1, s.lastAccessedAt = :accessedAt WHERE s.shortCode = :shortCode")
     void recordAccessByShortCode(@Param("shortCode") String shortCode, @Param("accessedAt") LocalDateTime accessedAt);
+
+    @Modifying
+    @Query("DELETE FROM ShortUrl s WHERE s.expiresAt IS NOT NULL AND s.expiresAt <= :now")
+    int deleteExpiredUrls(@Param("now") LocalDateTime now);
 }

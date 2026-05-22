@@ -5,6 +5,7 @@ import com.shrey.urlshortener.dto.UrlStatsResponse;
 import com.shrey.urlshortener.entity.ShortUrl;
 import com.shrey.urlshortener.exception.AliasAlreadyExistsException;
 import com.shrey.urlshortener.exception.ShortCodeNotFoundException;
+import com.shrey.urlshortener.exception.UrlExpiredException;
 import com.shrey.urlshortener.repository.ShortUrlRepository;
 import com.shrey.urlshortener.util.Base62Encoder;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Set;
@@ -32,22 +34,23 @@ public class ShortUrlServiceImpl implements ShortUrlService {
 
     @Override
     @Transactional
-    public String createShortUrl(String originalUrl, String customAlias) {
+    public String createShortUrl(String originalUrl, String customAlias, LocalDateTime expiresAt) {
         if (originalUrl == null || originalUrl.isBlank()) {
             throw new IllegalArgumentException("originalUrl must not be blank");
         }
+        validateExpiresAt(expiresAt);
 
         if (customAlias != null) {
-            return createCustomAlias(originalUrl, customAlias);
+            return createCustomAlias(originalUrl, customAlias, expiresAt);
         }
 
         // Idempotency: if the URL was already shortened, return the existing code.
         return shortUrlRepository.findByOriginalUrl(originalUrl)
                 .map(ShortUrl::getShortCode)
-                .orElseGet(() -> createAndPersist(originalUrl));
+                .orElseGet(() -> createAndPersist(originalUrl, expiresAt));
     }
 
-    private String createCustomAlias(String originalUrl, String customAlias) {
+    private String createCustomAlias(String originalUrl, String customAlias, LocalDateTime expiresAt) {
         validateCustomAlias(customAlias);
 
         String aliasKey = customAlias.toLowerCase(Locale.ROOT);
@@ -59,6 +62,7 @@ public class ShortUrlServiceImpl implements ShortUrlService {
                 .shortCode(customAlias)
                 .customAliasKey(aliasKey)
                 .originalUrl(originalUrl)
+                .expiresAt(expiresAt)
                 .build();
 
         try {
@@ -69,6 +73,12 @@ public class ShortUrlServiceImpl implements ShortUrlService {
 
         log.info("Custom short URL created: shortCode={} originalUrl={}", customAlias, originalUrl);
         return customAlias;
+    }
+
+    private void validateExpiresAt(LocalDateTime expiresAt) {
+        if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("expiresAt must be a future timestamp");
+        }
     }
 
     private void validateCustomAlias(String customAlias) {
@@ -90,10 +100,11 @@ public class ShortUrlServiceImpl implements ShortUrlService {
      * saveAndFlush() on step 1 forces Hibernate to execute the INSERT immediately,
      * so the database-assigned id is available before step 2 runs.
      */
-    private String createAndPersist(String originalUrl) {
+    private String createAndPersist(String originalUrl, LocalDateTime expiresAt) {
         // Step 1: first save — get the database-generated id
         ShortUrl entity = ShortUrl.builder()
                 .originalUrl(originalUrl)
+                .expiresAt(expiresAt)
                 .build();
         ShortUrl saved = shortUrlRepository.saveAndFlush(entity);
 
@@ -122,22 +133,24 @@ public class ShortUrlServiceImpl implements ShortUrlService {
         // 1. Check Redis first
         String cached = redisTemplate.opsForValue().get(shortCode);
         if (cached != null) {
-            System.out.println("CACHE HIT  \u2192 shortCode=" + shortCode);
+            log.debug("Cache hit for shortCode={}", shortCode);
             recordAccess(shortCode);
             return cached;
         }
 
         // 2. Cache miss — query PostgreSQL
-        System.out.println("CACHE MISS \u2192 shortCode=" + shortCode + " (querying DB)");
+        log.debug("Cache miss for shortCode={} (querying DB)", shortCode);
         ShortUrl entity = shortUrlRepository.findByShortCode(shortCode)
                 .orElseThrow(() -> new ShortCodeNotFoundException("Short code not found: " + shortCode));
 
         if (entity.isExpired()) {
-            throw new ShortCodeNotFoundException("Short code has expired: " + shortCode);
+            log.warn("Expired short code access attempted: shortCode={} expiresAt={}", shortCode, entity.getExpiresAt());
+            redisTemplate.delete(shortCode);
+            throw new UrlExpiredException(shortCode);
         }
 
         // 3. Store in Redis for future requests
-        redisTemplate.opsForValue().set(shortCode, entity.getOriginalUrl());
+        cacheOriginalUrl(shortCode, entity);
 
         // 4. Record access in DB
         recordAccess(shortCode);
@@ -147,6 +160,18 @@ public class ShortUrlServiceImpl implements ShortUrlService {
 
     private void recordAccess(String shortCode) {
         shortUrlRepository.recordAccessByShortCode(shortCode, LocalDateTime.now());
+    }
+
+    private void cacheOriginalUrl(String shortCode, ShortUrl entity) {
+        if (entity.getExpiresAt() == null) {
+            redisTemplate.opsForValue().set(shortCode, entity.getOriginalUrl());
+            return;
+        }
+
+        Duration ttl = Duration.between(LocalDateTime.now(), entity.getExpiresAt());
+        if (!ttl.isNegative() && !ttl.isZero()) {
+            redisTemplate.opsForValue().set(shortCode, entity.getOriginalUrl(), ttl);
+        }
     }
 
     @Override
@@ -171,7 +196,8 @@ public class ShortUrlServiceImpl implements ShortUrlService {
                 entity.getClickCount(),
                 entity.getCreatedAt(),
                 entity.getLastAccessedAt(),
-                entity.getExpiresAt()
+                entity.getExpiresAt(),
+                entity.isExpired()
         );
     }
 }

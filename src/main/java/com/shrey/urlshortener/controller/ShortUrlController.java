@@ -27,7 +27,10 @@ public class ShortUrlController {
     // POST /api/shorten
     @PostMapping("/api/shorten")
     public ResponseEntity<ShortenUrlResponse> shorten(@Valid @RequestBody ShortenUrlRequest request) {
-        String shortCode = shortUrlService.createShortUrl(request.getOriginalUrl(), request.getCustomAlias());
+        String shortCode = shortUrlService.createShortUrl(
+                request.getOriginalUrl(),
+                request.getCustomAlias(),
+                request.getExpiresAt());
         String shortUrl = baseUrl + "/" + shortCode;
         return ResponseEntity.ok(new ShortenUrlResponse(shortCode, shortUrl));
     }
